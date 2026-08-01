@@ -11,7 +11,7 @@ This sends directly back to me (a small piss-ant worker) at Rigging Loft.
 Thank you for any suggestions and/or ideas.
 Stay safe.`;
 
-const GANG_OPTIONS = ["Raising", "Bolt-up", "Plumb up", "Welding", "Safety", "Misc", "Unassigned"];
+const GANG_OPTIONS = ["Raising", "Bolt Up", "Plumb up", "Welding", "Safety", "Misc", "Unassigned"];
 
 async function submitFieldRequest(payload) {
   try {
