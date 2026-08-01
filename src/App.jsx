@@ -1,12 +1,21 @@
 import { useState } from "react";
 import { supabase } from "./supabaseClient";
 
-async function submitFieldRequest(text, reportedBy) {
+// Swap this out for the real wording whenever you have it — shown in red
+// right above the submit button, same as sketched.
+const DISCLAIMER_TEXT = `This is not a tool/material/supplies request form.
+This is for suggestions on how tools and supplies can be sent to the field in a way that better accommodates the field method of work/organization.
+There is no guarantee that these methods will be implemented due to constraints on this end.
+THIS IS NOT AN OFFICIAL COMPANY FORM.
+This sends directly back to me (a small piss-ant worker) at Rigging Loft.
+Thank you for any suggestions and/or ideas.
+Stay safe.`;
+
+const GANG_OPTIONS = ["Raising", "Bolt-up", "Plumb up", "Welding", "Safety", "Misc", "Unassigned"];
+
+async function submitFieldRequest(payload) {
   try {
-    const { error } = await supabase.from("field_requests").insert({
-      text,
-      reported_by: reportedBy || null,
-    });
+    const { error } = await supabase.from("field_requests").insert(payload);
     return { ok: !error, error: error ? error.message : null };
   } catch (err) {
     return { ok: false, error: err && err.message ? err.message : String(err) };
@@ -14,17 +23,28 @@ async function submitFieldRequest(text, reportedBy) {
 }
 
 export default function App() {
+  const [jobOrLocation, setJobOrLocation] = useState("");
+  const [name, setName] = useState("");
+  const [gang, setGang] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [text, setText] = useState("");
-  const [reportedBy, setReportedBy] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState(null);
 
+  const canSubmit = jobOrLocation.trim().length > 0 && text.trim().length > 0;
+
   const handleSubmit = async () => {
-    if (!text.trim()) return;
+    if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
-    const result = await submitFieldRequest(text.trim(), reportedBy.trim());
+    const result = await submitFieldRequest({
+      job_or_location: jobOrLocation.trim(),
+      reported_by: name.trim() || null,
+      gang: gang || null,
+      contact_email: contactEmail.trim() || null,
+      text: text.trim(),
+    });
     setSubmitting(false);
     if (result.ok) {
       setSent(true);
@@ -50,13 +70,16 @@ export default function App() {
           </div>
           <h1 className="text-slate-100 font-semibold text-xl mb-2">Sent</h1>
           <p className="text-slate-400 text-sm mb-6">
-            Your request has been sent. Thanks for letting us know.
+            Your suggestion has been sent. Thanks for letting us know.
           </p>
           <button
             onClick={() => {
               setSent(false);
+              setJobOrLocation("");
+              setName("");
+              setGang("");
+              setContactEmail("");
               setText("");
-              setReportedBy("");
             }}
             className="text-sm bg-amber-500 text-slate-950 font-semibold rounded-md px-4 py-2 hover:bg-amber-400"
           >
@@ -68,34 +91,84 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm">
-        <h1 className="text-slate-200 font-semibold text-lg mb-1 text-center">
-          Send a request
+        <h1 className="text-slate-200 font-semibold text-lg mb-5 text-center">
+          Send a suggestion
         </h1>
-        <p className="text-sm text-slate-500 mb-5 text-center">
-          Need something, or want to flag an issue? Send a quick note — no login needed.
-        </p>
+
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+            Job # or location <span className="text-amber-400">*</span>
+          </label>
+          <input
+            value={jobOrLocation}
+            onChange={(e) => setJobOrLocation(e.target.value)}
+            placeholder='e.g. 2442, or "north yard"'
+            className="w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+            Name <span className="text-slate-600">(optional)</span>
+          </label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+          />
+        </div>
+
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+            Gang <span className="text-slate-600">(optional)</span>
+          </label>
+          <select
+            value={gang}
+            onChange={(e) => setGang(e.target.value)}
+            className="w-full appearance-none bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+          >
+            <option value="">Select gang...</option>
+            {GANG_OPTIONS.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+            Contact email for response <span className="text-slate-600">(optional)</span>
+          </label>
+          <input
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/60"
+          />
+        </div>
+
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="What do you need?"
-          rows={5}
+          placeholder="What's the suggestion?"
+          rows={6}
           className="w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-md px-3 py-2.5 mb-3 focus:outline-none focus:ring-2 focus:ring-amber-500/60 resize-none"
         />
-        <input
-          value={reportedBy}
-          onChange={(e) => setReportedBy(e.target.value)}
-          placeholder="Your name (optional)"
-          className="w-full bg-slate-900 border border-slate-700 text-slate-100 text-sm rounded-md px-3 py-2.5 mb-4 focus:outline-none focus:ring-2 focus:ring-amber-500/60"
-        />
+
+        <p className="text-xs text-red-400 mb-4 text-left whitespace-pre-line leading-relaxed">
+          {DISCLAIMER_TEXT}
+        </p>
+
         {error && <p className="text-xs text-red-400 mb-3 text-center">{error}</p>}
         <button
           onClick={handleSubmit}
-          disabled={!text.trim() || submitting}
+          disabled={!canSubmit || submitting}
           className="w-full text-sm bg-amber-500 text-slate-950 font-semibold rounded-md py-2.5 hover:bg-amber-400 disabled:opacity-40"
         >
-          {submitting ? "Sending..." : "Send request"}
+          {submitting ? "Sending..." : "Send suggestion"}
         </button>
       </div>
     </div>
