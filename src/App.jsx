@@ -22,6 +22,41 @@ async function submitFieldRequest(payload) {
   }
 }
 
+// Same bright little chime used in the main Riggy app when something saves.
+let sharedAudioCtx = null;
+function getAudioCtx() {
+  if (!sharedAudioCtx) {
+    sharedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (sharedAudioCtx.state === "suspended") {
+    sharedAudioCtx.resume().catch(() => {});
+  }
+  return sharedAudioCtx;
+}
+function playSaveChime() {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const playNote = (freq, startTime, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.16, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+    playNote(880, now, 0.12);
+    playNote(1318.51, now + 0.09, 0.22);
+  } catch {
+    // Audio not available/blocked — fine to just skip it
+  }
+}
+
 export default function App() {
   const [jobOrLocation, setJobOrLocation] = useState("");
   const [name, setName] = useState("");
@@ -38,6 +73,7 @@ export default function App() {
     if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
+    playSaveChime();
     const result = await submitFieldRequest({
       job_or_location: jobOrLocation.trim(),
       reported_by: name.trim() || null,
